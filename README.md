@@ -6,6 +6,18 @@ A local Retrieval-Augmented Generation (RAG) system that indexes PDF documents a
 
 ---
 
+## Screenshots
+
+**Step 1 — Document indexed successfully**
+
+![Indexed document](screenshots/indexed.png)
+
+**Step 2 — Answer with sources**
+
+![Answer and sources](screenshots/answer-sources.png)
+
+---
+
 ## Architecture
 
 ```

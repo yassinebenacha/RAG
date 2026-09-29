@@ -1,69 +1,73 @@
 # RAG — Document Q&A
 
-A local Retrieval-Augmented Generation (RAG) system that lets you upload a PDF and ask questions about its content. Runs entirely on your machine — no cloud API required.
+**Technical Challenge · AI Engineer · CIRES Technologies · Tanger Med Group**
 
-**Stack:** Python · Flask · LangChain · PDFPlumber · FastEmbed · ChromaDB · Ollama (Mistral)
+A local Retrieval-Augmented Generation (RAG) system that indexes PDF documents and answers questions strictly from their content. Runs entirely on your machine — no cloud API required.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────┐
-│  PDF upload │
-└──────┬──────┘
-       │
-       ▼
-PDFPlumberLoader          ← extract text, page by page
-       │
-       ▼
-RecursiveCharacterTextSplitter   ← 1 024-char chunks, 80-char overlap
-       │
-       ▼
-FastEmbedEmbeddings       ← dense vector per chunk
-       │
-       ▼
-ChromaDB (./db)           ← persist vectors locally
+PDF upload
+    │
+    ▼
+PDFPlumberLoader          ← extract text, one Document per page
+    │
+    ▼
+RecursiveCharacterTextSplitter   ← 1 024-char chunks · 80-char overlap
+    │
+    ▼
+FastEmbedEmbeddings       ← BAAI/bge-small-en-v1.5 dense vectors
+    │
+    ▼
+ChromaDB  (./db)          ← persist vectors locally
 
-━━━ At query time ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━ Query time ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 User question
-       │
-       ▼
+    │
+    ▼
 FastEmbedEmbeddings       ← embed the question
-       │
-       ▼
-ChromaDB retriever        ← similarity search, top-5 chunks
-       │
-       ▼
-Mistral via Ollama        ← generate answer grounded in context
-       │
-       ▼
-Answer + source references
+    │
+    ▼
+ChromaDB retriever        ← similarity search · top-5 chunks · threshold 0.1
+    │
+    ▼
+Mistral via Ollama        ← generate answer grounded in context only
+    │
+    ▼
+Answer + deduplicated source references
 ```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| API server | Python · Flask |
+| RAG framework | LangChain · LangChain Community |
+| PDF extraction | PDFPlumber |
+| Chunking | RecursiveCharacterTextSplitter |
+| Embeddings | FastEmbed (BAAI/bge-small-en-v1.5) |
+| Vector store | ChromaDB |
+| LLM | Mistral via Ollama (local) |
 
 ---
 
 ## Prerequisites
 
 | Tool | Version |
-|------|---------|
+|---|---|
 | Python | 3.10+ |
-| [Ollama](https://ollama.com/) | latest |
-| Mistral model | `mistral:latest` |
+| Ollama | latest — [ollama.com](https://ollama.com/) |
 
 ---
 
 ## Setup
 
-### 1. Clone the repository
-
-```bash
-git clone <repository-url>
-cd RAG
-```
-
-### 2. Create and activate a virtual environment
+### 1. Create and activate a virtual environment
 
 ```bash
 # Windows
@@ -75,19 +79,17 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install Python dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> **Note:** FastEmbed will download its embedding model (~60 MB) on the first run.
+> FastEmbed downloads its embedding model (~60 MB) on the first run.
 
-### 4. Install Ollama
+### 3. Install Ollama and pull Mistral
 
-Download from [https://ollama.com/](https://ollama.com/) and follow the installer for your OS.
-
-### 5. Pull the Mistral model
+Download Ollama from [https://ollama.com/](https://ollama.com/), then:
 
 ```bash
 ollama pull mistral
@@ -95,90 +97,64 @@ ollama pull mistral
 
 ---
 
-## Running the application
+## Run
 
-### 1. Start Ollama (keep this terminal open)
-
+**Terminal 1 — start Ollama:**
 ```bash
 ollama serve
 ```
 
-### 2. Start the Flask server (in a second terminal, with venv activated)
-
+**Terminal 2 — start the application:**
 ```bash
 python app.py
 ```
 
-The server starts at **http://127.0.0.1:5000**
-
-### 3. Open the web interface
-
-Navigate to **http://127.0.0.1:5000** in your browser.
+Open **http://127.0.0.1:5000** in your browser.
 
 ---
 
 ## Usage
 
-### Upload a PDF
+### Step 1 — Upload a PDF
 
-1. Click **"Click to select a PDF file"** and choose a `.pdf` file.
-2. Click **"Index document"**.
-3. Wait for confirmation: `Indexed — N page(s), M chunks`.
+1. Click the upload zone and select a `.pdf` file.
+2. Click **Index document**.
+3. Wait for: `✓ Document indexed — N page(s) · M chunks`
 
-Indexing time depends on PDF length. A 20-page document typically takes 5–15 seconds.
+### Step 2 — Ask a question
 
-### Ask a question
-
-1. Type your question in the text area (or press **Enter** to submit).
-2. Click **"Get answer"**.
-3. The system retrieves the most relevant chunks, sends them to Mistral, and displays the answer with source references (filename, page number, excerpt).
-
-### Example questions
-
-For a Big Data introductory document:
-
-- *What is Big Data?*
-- *What are the 3 Vs of Big Data?*
-- *What technologies are used for Big Data processing?*
-- *What is the difference between batch and stream processing?*
-
-### Off-topic questions
-
-For questions not covered by the indexed document, the model will respond:
-
-> "The document does not contain information about this topic."
+1. Type your question in the text area (or press **Enter**).
+2. Click **Get answer**.
+3. The system retrieves the most relevant chunks, sends them to Mistral, and returns an answer with source references.
 
 ---
 
-## Project structure
+## Example
 
-```
-RAG/
-├── app.py              ← Flask API (upload, index, answer)
-├── index.html          ← Single-page web UI
-├── requirements.txt    ← Direct Python dependencies
-├── README.md           ← This file
-├── .gitignore
-├── pdf/                ← Uploaded PDFs (not committed)
-└── db/                 ← ChromaDB vector store (not committed)
-```
+Using a Big Data introductory document:
+
+**Question:** *What are the 3 Vs of Big Data?*
+
+**Expected answer:** The model will cite Volume, Velocity, and Variety from the document and reference the page where that content appears.
+
+**Off-topic question:** *What is the capital of France?*
+
+**Expected response:** *"The document does not contain information about this topic."*
 
 ---
 
-## API reference
+## API Reference
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET  | `/`    | Serve web UI |
+|---|---|---|
+| GET | `/` | Serve web UI |
 | POST | `/pdf` | Upload and index a PDF |
 | POST | `/ask` | Ask a question about indexed documents |
 
 ### POST /pdf
 
-**Input:** `multipart/form-data` with field `file`
-
-**Output:**
 ```json
+// Response
 {
   "status": "indexed",
   "filename": "document.pdf",
@@ -189,36 +165,34 @@ RAG/
 
 ### POST /ask
 
-**Input:**
 ```json
+// Request
 { "query": "What is Big Data?" }
-```
 
-**Output:**
-```json
+// Response
 {
   "answer": "Big Data refers to...",
   "sources": [
     {
       "source": "document.pdf",
       "page": 3,
-      "excerpt": "Big Data is defined as datasets that are too large..."
+      "excerpt": "Big Data is defined as..."
     }
   ]
 }
 ```
 
+### Error codes
+
+| Code | Meaning |
+|---|---|
+| 400 | Invalid input or no documents indexed |
+| 500 | Vector store error |
+| 503 | Ollama is not running |
+
 ---
 
-## Configuration
-
-Override the Ollama model via environment variable:
-
-```bash
-OLLAMA_MODEL=llama3 python app.py
-```
-
-### Reset the vector store
+## Reset the vector store
 
 To clear all indexed documents and start fresh:
 
@@ -232,9 +206,25 @@ rm -rf db && mkdir db
 
 ---
 
-## Known limitations
+## Project structure
 
-- **Session state only:** the Ask panel is unlocked in the browser after a successful upload in the same session. Refreshing the page hides it even if the ChromaDB index still exists. To re-enable, upload the PDF again (it will be re-indexed).
-- **Accumulative indexing:** each upload adds chunks to the same ChromaDB collection. Uploading multiple PDFs will allow questions across all of them. Reset `./db` to start clean.
-- **Local CPU inference:** response time varies with hardware. Expect 30–120 seconds per answer on CPU without a GPU.
+```
+RAG/
+├── app.py              ← Flask API — upload, index, answer
+├── index.html          ← Single-page web UI
+├── requirements.txt    ← Direct Python dependencies
+├── README.md           ← This file
+├── .gitignore
+├── pdf/                ← Uploaded PDFs (git-ignored)
+├── db/                 ← ChromaDB vector store (git-ignored)
+└── screenshots/        ← Demo screenshots
+```
+
+---
+
+## Limitations
+
+- **Session state:** the Ask panel unlocks only within the current browser session. Refreshing the page requires re-uploading the PDF (indexing is fast; the DB is already populated).
+- **Accumulative indexing:** each upload adds to the same ChromaDB collection. Reset `./db` to start clean.
+- **CPU inference:** without a GPU, Mistral may take 30–120 seconds per answer.
 - **Hallucination risk:** the prompt strictly instructs Mistral to stay within the retrieved context, but LLMs can occasionally ignore this constraint.

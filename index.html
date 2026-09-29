@@ -18,10 +18,10 @@
     header {
       background: #fff;
       border-bottom: 1px solid #e2e8f0;
-      padding: 16px 24px;
+      padding: 14px 24px;
     }
-    header h1  { font-size: 17px; font-weight: 600; }
-    header p   { font-size: 13px; color: #64748b; margin-top: 3px; }
+    header h1    { font-size: 17px; font-weight: 600; color: #0f172a; }
+    header .sub  { font-size: 12px; color: #94a3b8; margin-top: 3px; }
 
     /* ── Layout ─────────────────────────────────────────────────────────────── */
     main {
@@ -57,12 +57,12 @@
       text-align: center;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
+      user-select: none;
     }
-    .upload-zone:hover          { border-color: #2563eb; background: #eff6ff; }
-    .upload-zone input          { display: none; }
-    .upload-zone .uz-icon       { font-size: 26px; margin-bottom: 6px; }
-    .upload-zone .uz-label      { font-size: 14px; color: #475569; }
-    .upload-zone .uz-hint       { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+    .upload-zone:hover        { border-color: #2563eb; background: #eff6ff; }
+    .upload-zone .uz-icon     { font-size: 26px; margin-bottom: 6px; }
+    .upload-zone .uz-label    { font-size: 14px; color: #475569; }
+    .upload-zone .uz-hint     { font-size: 12px; color: #94a3b8; margin-top: 4px; }
 
     /* ── Buttons ─────────────────────────────────────────────────────────────── */
     .btn {
@@ -80,9 +80,9 @@
       width: 100%;
       margin-top: 12px;
     }
-    .btn-primary               { background: #2563eb; color: #fff; }
+    .btn-primary                      { background: #2563eb; color: #fff; }
     .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
-    .btn:disabled              { opacity: 0.4; cursor: not-allowed; }
+    .btn:disabled                     { opacity: 0.4; cursor: not-allowed; }
 
     /* ── Status bar ──────────────────────────────────────────────────────────── */
     .status {
@@ -111,7 +111,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Badge (indexed file) ────────────────────────────────────────────────── */
+    /* ── Indexed badge ───────────────────────────────────────────────────────── */
     .badge {
       display: inline-flex;
       align-items: center;
@@ -140,9 +140,8 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    textarea:focus       { border-color: #2563eb; }
-    textarea::placeholder{ color: #94a3b8; }
-    textarea:disabled    { background: #f8fafc; cursor: not-allowed; }
+    textarea:focus        { border-color: #2563eb; }
+    textarea::placeholder { color: #94a3b8; }
 
     /* ── Answer ──────────────────────────────────────────────────────────────── */
     .answer-text {
@@ -162,10 +161,11 @@
       border-top: 1px solid #e2e8f0;
       margin: 18px 0;
     }
-    .sources-list          { display: flex; flex-direction: column; gap: 8px; }
-    .source-item           { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
-    .source-meta           { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 6px; }
-    .source-excerpt        { font-size: 13px; color: #475569; line-height: 1.55; }
+    .sources-list   { display: flex; flex-direction: column; gap: 8px; }
+    .source-item    { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
+    .source-meta    { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px;
+                      font-weight: 600; color: #2563eb; margin-bottom: 6px; }
+    .source-excerpt { font-size: 13px; color: #475569; line-height: 1.55; }
 
     .hidden { display: none !important; }
   </style>
@@ -174,7 +174,7 @@
 
 <header>
   <h1>RAG — Document Q&amp;A</h1>
-  <p>Upload a PDF document, then ask questions about its content.</p>
+  <div class="sub">Technical Challenge &middot; AI Engineer &middot; CIRES Technologies</div>
 </header>
 
 <main>
@@ -183,15 +183,20 @@
   <div class="card">
     <div class="card-label">Step 1 — Upload PDF</div>
 
-    <label class="upload-zone" id="dropZone">
-      <input type="file" id="pdfFile" accept="application/pdf">
+    <!--
+      The file input is kept outside the clickable zone to prevent browser
+      rendering artifacts (native file-picker buttons appearing inside the zone).
+    -->
+    <input type="file" id="pdfFile" accept="application/pdf" style="display:none">
+
+    <div class="upload-zone" id="dropZone" onclick="pdfInput.click()">
       <div class="uz-icon">📄</div>
       <div class="uz-label">Click to select a PDF file</div>
       <div class="uz-hint">PDF only</div>
-    </label>
+    </div>
 
     <div id="fileSelected" class="status info hidden">
-      <span></span>📎</span>
+      <span>📎</span></span>
       <span id="fileNameLabel">—</span>
     </div>
 
@@ -202,20 +207,19 @@
     <div id="uploadStatus" class="status hidden"></div>
   </div>
 
-  <!-- ── Step 2: Ask ────────────────────────────────────────────────────────── -->
+  <!-- ── Step 2: Ask a question ─────────────────────────────────────────────── -->
   <div class="card">
     <div class="card-label">Step 2 — Ask a Question</div>
 
-    <!-- Shown while no document is indexed -->
     <div id="noDocMsg" class="status info">
       <span>ℹ️</span>
       <span>Index a PDF in Step 1 before asking questions.</span>
     </div>
 
-    <!-- Shown once a document is indexed -->
     <div id="askPanel" class="hidden">
-      <div class="badge" id="indexedBadge">
-        <span>✅</span>
+
+      <div class="badge">
+        <span>✓</span>
         <span id="indexedName">document.pdf</span>
       </div>
 
@@ -250,19 +254,25 @@
   // ── State ────────────────────────────────────────────────────────────────────
   let documentIndexed = false;
 
-  // ── File selection ───────────────────────────────────────────────────────────
+  // ── DOM references ───────────────────────────────────────────────────────────
   const pdfInput      = document.getElementById("pdfFile");
   const uploadBtn     = document.getElementById("uploadBtn");
   const fileSelected  = document.getElementById("fileSelected");
   const fileNameLabel = document.getElementById("fileNameLabel");
 
+  // ── File selection ───────────────────────────────────────────────────────────
   pdfInput.addEventListener("change", () => {
     const file = pdfInput.files[0];
-    if (file) {
-      fileNameLabel.textContent = file.name;
-      fileSelected.classList.remove("hidden");
-      uploadBtn.disabled = false;
-    }
+    if (!file) return;
+
+    // Show filename + human-readable size
+    const size = file.size < 1024 * 1024
+      ? (file.size / 1024).toFixed(1) + " KB"
+      : (file.size / (1024 * 1024)).toFixed(1) + " MB";
+
+    fileNameLabel.textContent = `${file.name}  ·  ${size}`;
+    fileSelected.classList.remove("hidden");
+    uploadBtn.disabled = false;
   });
 
   // ── Upload & Index ───────────────────────────────────────────────────────────
@@ -288,9 +298,9 @@
       }
 
       setStatus(statusEl, "success",
-        `Indexed — ${data.pages} page(s), ${data.chunks} chunks`);
+        `✓ Document indexed — ${data.pages} page(s) · ${data.chunks} chunks`);
 
-      // Unlock the Ask panel
+      // Unlock Step 2
       documentIndexed = true;
       document.getElementById("noDocMsg").classList.add("hidden");
       document.getElementById("askPanel").classList.remove("hidden");
@@ -307,8 +317,8 @@
     const query = document.getElementById("queryInput").value.trim();
     if (!query) return;
 
-    const askBtn    = document.getElementById("askBtn");
-    const askStatus = document.getElementById("askStatus");
+    const askBtn     = document.getElementById("askBtn");
+    const askStatus  = document.getElementById("askStatus");
     const answerCard = document.getElementById("answerCard");
 
     askBtn.disabled = true;
@@ -324,6 +334,7 @@
       const data = await res.json();
 
       if (!res.ok) {
+        // Covers HTTP 400 (no index), 503 (Ollama down), 500 (vector store error)
         setStatus(askStatus, "error", data.error || "Request failed.");
         askBtn.disabled = false;
         return;
@@ -331,10 +342,10 @@
 
       askStatus.classList.add("hidden");
 
-      // Render answer
+      // ── Render answer ──────────────────────────────────────────────────────
       document.getElementById("answerText").textContent = data.answer;
 
-      // Render sources
+      // ── Render sources ─────────────────────────────────────────────────────
       const list = document.getElementById("sourcesList");
       list.innerHTML = "";
 

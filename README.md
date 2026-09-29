@@ -4,6 +4,8 @@
 
 A local Retrieval-Augmented Generation (RAG) system that indexes PDF documents and answers questions strictly from their content. Runs entirely on your machine — no cloud API required.
 
+![Demo](demo.gif)
+
 ---
 
 ## Screenshots
